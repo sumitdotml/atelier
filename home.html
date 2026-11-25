@@ -1,0 +1,203 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Workspaces</title>
+  <link rel="icon" id="favicon" href="icons/32.png">
+  <link rel="stylesheet" href="ui.css">
+  <style>
+    body { height: 100vh; overflow: hidden; }
+    .app { display: flex; height: 100vh; }
+
+    /* small labels share one style everywhere */
+    .label { color: var(--overlay0); font-size: var(--fs-sm); line-height: var(--lh-sm); }
+
+    /* sidebar */
+    .sidebar {
+      flex: none;
+      display: flex;
+      flex-direction: column;
+      gap: var(--s2);
+      position: relative;
+      width: var(--sidebar-w, 320px);
+      padding: var(--s4) var(--s2);
+      background: var(--mantle);
+      border-right: 1px solid var(--surface0);
+    }
+    /* drag handle on the sidebar's right edge */
+    .resizer {
+      position: absolute;
+      top: 0;
+      right: -4px;
+      z-index: 5;
+      width: 8px;
+      height: 100%;
+      cursor: col-resize;
+    }
+    .resizer::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 3px;
+      width: 2px;
+      height: 100%;
+      background: transparent;
+      transition: background 0.12s;
+    }
+    .resizer:hover::after, .resizer.active::after, .resizer:focus-visible::after { background: var(--ring); }
+    .resizer:focus-visible { outline: none; }
+    body.resizing { cursor: col-resize; user-select: none; }
+
+    .brand { display: flex; align-items: center; gap: var(--s2); height: 32px; padding: 0 var(--s2); font-weight: 600; }
+    .logo { display: grid; grid-template-columns: 7px 7px; gap: 2px; }
+    .logo i { width: 7px; height: 7px; border-radius: 2px; }
+    .search {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+      height: 32px;
+      padding: 0 var(--s2);
+      border: 1px solid var(--surface0);
+      border-radius: var(--r3);
+      background: var(--base);
+      color: var(--overlay0);
+    }
+    .search:focus-within { border-color: var(--ring); }
+    .search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; }
+    .search input::placeholder { color: var(--overlay0); }
+    .section { display: flex; align-items: center; justify-content: space-between; margin-top: var(--s2); padding-left: var(--s2); }
+
+    .items { flex: 1; overflow-y: auto; }
+    .item {
+      display: flex;
+      align-items: center;
+      gap: var(--s3);
+      padding: var(--s2);
+      border-radius: var(--r3);
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .item:hover { background: var(--hover); }
+    .item.selected { background: var(--selected); }
+    .item.dim { opacity: 0.4; }
+    .item.drop-target { background: var(--selected); box-shadow: inset 0 0 0 1px var(--tint); }
+    .item.drop-before { box-shadow: inset 0 2px 0 var(--tint); }
+    .item.drop-after { box-shadow: inset 0 -2px 0 var(--tint); }
+    .item.dragging { opacity: 0.4; }
+    /* the tile is exactly as tall as the two lines beside it: 20 + 16 */
+    .item-body { flex: 1; min-width: 0; }
+    .item-row { display: flex; align-items: center; gap: var(--s2); height: var(--lh-md); }
+    .item-name { min-width: 0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-meta { display: flex; align-items: center; gap: var(--s2); height: var(--lh-sm); }
+    .item-meta .favs { display: flex; gap: var(--s1); }
+    .item-meta img { width: 12px; height: 12px; border-radius: 2px; }
+    .item-key { margin-left: auto; }
+
+    .hints { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s3); padding: var(--s3) var(--s2) 0; border-top: 1px solid var(--surface0); }
+    .hints span { display: inline-flex; align-items: center; gap: var(--s1); }
+
+    /* main */
+    .main { flex: 1; min-width: 0; overflow-y: auto; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: var(--s6); }
+
+    /* the tile is exactly as tall as the title and the line under it: 24 + 20 */
+    .head { display: flex; align-items: center; gap: var(--s3); }
+    .dialog-head { display: flex; align-items: center; gap: var(--s3); margin-bottom: var(--s4); }
+    .dialog-head p { margin: 0; }
+    .head-text { flex: 1; min-width: 0; }
+    .head h1 { margin: 0; font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .head-meta { display: flex; align-items: center; gap: var(--s2); height: var(--lh-md); }
+    .head .input { height: var(--lh-lg); padding: 0 var(--s2); font-size: var(--fs-lg); font-weight: 600; }
+    .head-actions { display: flex; align-items: center; gap: var(--s1); }
+
+    .section-title { margin: var(--s5) 0 var(--s2); padding: 0 var(--s2); }
+
+    .add {
+      display: flex;
+      align-items: center;
+      gap: var(--s2);
+      height: 32px;
+      margin-bottom: var(--s1);
+      padding: 0 var(--s2) 0 var(--s3);
+      border: 1px solid var(--surface0);
+      border-radius: var(--r3);
+      background: var(--mantle);
+      color: var(--overlay0);
+    }
+    .add:focus-within { border-color: var(--ring); }
+    .add input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; }
+    .add input::placeholder { color: var(--overlay0); }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: var(--s3);
+      height: 36px;
+      padding: 0 var(--s2);
+      border-radius: var(--r3);
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .row:hover { background: var(--hover); }
+    .row.dragging { opacity: 0.4; }
+    .row > img { width: 16px; height: 16px; flex: none; border-radius: 3px; }
+    .row-text { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: var(--s2); }
+    .row-title { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row-url { flex: none; max-width: 40%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--tint); align-self: center; }
+    .row-actions { display: flex; opacity: 0; transition: opacity 0.12s; }
+    .row-actions .btn { width: 28px; height: 28px; border-radius: var(--r2); }
+    .row:hover .row-actions, .row:focus-within .row-actions { opacity: 1; }
+    .btn.on { color: var(--tint); }
+
+    .group-head { display: flex; align-items: center; gap: var(--s2); margin: var(--s5) 0 var(--s2); padding: 0 var(--s2); }
+    .group-head:first-child { margin-top: 0; }
+
+    /* empty text lines up with the row text, not centred */
+    .empty { padding: var(--s2) var(--s2) var(--s2) 36px; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: var(--s2); }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--s2);
+      max-width: 220px;
+      height: 32px;
+      padding: 0 var(--s3);
+      border: 1px solid var(--surface0);
+      border-radius: var(--r3);
+      background: var(--mantle);
+      cursor: pointer;
+      transition: border-color 0.12s, background 0.12s;
+    }
+    .chip:hover { border-color: var(--surface1); background: var(--hover); }
+    .chip img { width: 16px; height: 16px; flex: none; border-radius: 3px; }
+    .chip span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chip-x {
+      display: none;
+      place-items: center;
+      width: 18px;
+      height: 18px;
+      margin-right: calc(-1 * var(--s1));
+      padding: 0;
+      border: 0;
+      border-radius: var(--r1);
+      background: none;
+      color: var(--overlay0);
+      cursor: pointer;
+    }
+    .chip:hover .chip-x, .chip:focus-within .chip-x { display: grid; }
+    .chip-x:hover { background: var(--selected); color: var(--text); }
+    .chip.add { border-style: dashed; background: none; color: var(--overlay0); }
+    .chip.add:hover { color: var(--text); }
+    .chip.editing { cursor: text; border-color: var(--ring); color: var(--overlay0); }
+    .chip-input { width: 200px; border: 0; outline: 0; background: none; color: var(--text); }
+
+    .row:focus-visible, .item:focus-visible, .chip:focus-visible { outline: 1.5px solid var(--ring); outline-offset: -1.5px; }
+  </style>
+</head>
+<body>
+  <script src="palette.js"></script>
+  <script type="module" src="home.js"></script>
+</body>
+</html>
