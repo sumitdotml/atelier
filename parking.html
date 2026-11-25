@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Parked workspaces</title>
+  <link rel="stylesheet" href="ui.css">
+  <style>
+    body { display: grid; place-items: center; min-height: 100vh; }
+    main { max-width: 380px; padding: 24px; text-align: center; }
+    .grid { display: inline-grid; grid-template-columns: 14px 14px; gap: 4px; margin-bottom: 18px; }
+    .grid span { width: 14px; height: 14px; border-radius: 4px; }
+    h1 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+    p { margin: 0; color: var(--subtext0); line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="grid">
+      <span style="background:#fab387"></span><span style="background:#a6e3a1"></span>
+      <span style="background:#cba6f7"></span><span style="background:#89b4fa"></span>
+    </div>
+    <h1>Parked workspaces</h1>
+    <p>Tabs from the workspaces you are not using wait here so they stay loaded. This window minimizes itself; you never need to open it.</p>
+  </main>
+</body>
+</html>
